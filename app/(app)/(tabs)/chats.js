@@ -1,4 +1,4 @@
-import {View, ScrollView, ActivityIndicator, StyleSheet} from 'react-native';
+import {View, ScrollView, ActivityIndicator, StyleSheet, Text} from 'react-native';
 import React, { useEffect, useState } from 'react';
 import ChatList from '../../../components/ChatList';
 import axios from 'axios'; 
@@ -7,10 +7,10 @@ import {useWebSocket} from "@/context/webSocketContext";
 
 
 export default function Chats() {
-  const [chats, setChats] = useState([]); 
+  const [chats, setChats] = useState([]);
   const apiUrl = process.env.EXPO_PUBLIC_API_URL;
   const [loading, setLoading] = useState(true);
-  const { messages: wsMessages, sendMessage } = useWebSocket();
+  const { messages: wsMessages } = useWebSocket();
   const fetchChats = async () => {
       try {
         const token = await AsyncStorage.getItem('authToken');
@@ -27,26 +27,30 @@ export default function Chats() {
         setLoading(false);
       } catch (error) {
         console.log('There is an error: ', error);
+      } finally {
+        setLoading(false);
       }
     };
   useEffect(() => {
     fetchChats();
   }, [wsMessages]);
-
+  console.log('Chats state:', chats);
+  console.log('Chats length > 0:', chats.length > 0);
   return (
-    <View className="flex-1">
+    <View style={{flex: 1}}>
       {loading ? (
         <View style={styles.activityIndicator}>
           <ActivityIndicator size="large" color="gray" />
         </View>
-      ) : (
+      ) : chats.length > 0 ? ( // Проверяем длину массива
         <ScrollView>
-          {chats? (<ChatList chats={chats} /> ):(
-            <Text>нет чатов</Text>
-          )}
+          <ChatList chats={chats} />
         </ScrollView>
+      ) : (
+        <View style={styles.noChatsContainer}>
+          <Text style={styles.noChatsText}>Нет чатов</Text>
+        </View>
       )}
-      
     </View>
   );
 }
@@ -56,5 +60,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  noChatsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noChatsText: {
+    fontSize: 16,
+    color: 'gray',
   },
 });
