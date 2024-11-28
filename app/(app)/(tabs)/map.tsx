@@ -61,6 +61,11 @@ const MyMapComponent: React.FC = () => {
     }
   }, [initialLocation]);
 
+  useEffect(() => {
+    if (eventLocation) {
+      eventCreationBottomSheetRef.current?.present();
+    }
+  }, [eventLocation]);
 
   useEffect(() => {
     const fetchFriendsGeosData = async () => {
@@ -85,7 +90,6 @@ const MyMapComponent: React.FC = () => {
 
   const createEvent = (lat: number, lon: number) => {
     setEventLocation({ lat, lon });
-    eventCreationBottomSheetRef.current?.present();
   };
 
 
@@ -95,8 +99,7 @@ const MyMapComponent: React.FC = () => {
         <MapView
           ref={(ref) => setMapRef(ref)}
           style={{ width: '100%', height: '100%' }}
-          showsUserLocation={true} // Показываем текущую локацию пользователя
-
+          showsUserLocation={false} // Показываем текущую локацию пользователя
           onPress={(e) => {
             const centerLat = e.nativeEvent.coordinate.latitude;
             const centerLon = e.nativeEvent.coordinate.longitude;
@@ -109,6 +112,14 @@ const MyMapComponent: React.FC = () => {
           }}
           onRegionChangeComplete={handleRegionChangeComplete} // Обработчик завершения изменения региона
         >
+          {/* User Marker */}
+          {location && (
+              <Marker
+                  key={user.id}
+                  coordinate={{latitude: location.latitude, longitude: location.longitude}}>
+                <FriendOnMap user_id={user.id} />
+              </Marker>
+          )}
           {/* Event markers */}
           {markers && markers.map((marker) => (
             <Marker
