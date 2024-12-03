@@ -9,6 +9,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import createEvent from "@/constants/createEvent";
 import {AuthContext} from "@/context/authContext";
+import ConfirmButton from "@/components/ConfirmButton";
 
 
 interface EventCreationProps {
@@ -85,11 +86,7 @@ const EventCreationBottomSheetModal = React.memo(forwardRef<BottomSheetModal, Ev
           numberOfLines={1}
           onChangeText={handleDescriptionChange}
         />
-        <TouchableOpacity onPress={() => handleCreateEvent()}>
-          <View style={styles.button}>
-            <Text style={styles.buttonText}>   Создать событие   </Text>
-          </View>
-        </TouchableOpacity>
+        <ConfirmButton onPress={handleCreateEvent} text={"Создать событие"} />
       </BottomSheetView>
     </BottomSheetModal>
   );
@@ -120,19 +117,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     alignSelf: 'flex-start',
     paddingLeft: '10%',
-  },
-  button: {
-    width: 'auto',
-    height: 50,
-    backgroundColor: '#001169',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 30,
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
 

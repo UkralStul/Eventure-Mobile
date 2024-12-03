@@ -1,9 +1,11 @@
 import axios from 'axios';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const fetchEventData = async (id) => {
     try {
         const apiUrl = process.env.EXPO_PUBLIC_API_URL_GEO;
-        const response = await axios.get(`${apiUrl}/event/events/${id}`);
+        const token = await AsyncStorage.getItem('authToken');
+        const response = await axios.post(`${apiUrl}/api/v1/events/${id}/`,{}, {params:{token}});
         return response.data;
 
     } catch (error) {

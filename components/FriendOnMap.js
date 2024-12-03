@@ -19,12 +19,12 @@ export default function FriendOnMap({ user_id }) {
 
 const styles = StyleSheet.create({
     avatarContainer: {
-        width: 50, // Размер круга
-        height: 50,
-        borderRadius: 25, // Половина ширины и высоты для получения круга
+        width: 32, // Размер круга
+        height: 32,
+        borderRadius: 15, // Половина ширины и высоты для получения круга
         overflow: 'hidden', // Обрезаем изображение, чтобы оно не выходило за границы круга
-        borderWidth: 2,
-        borderColor: 'white', // Цвет границы
+        borderWidth: 1,
+        borderColor: 'black', // Цвет границы
         justifyContent: 'center',
         alignItems: 'center',
     },

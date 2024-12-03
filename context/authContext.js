@@ -81,6 +81,7 @@ export const AuthContextProvider = ({ children }) => {
                     await AsyncStorage.setItem('authToken', response.data.access_token);
                     setUser(response.data.user);
                     setIsAuthenticated(true);
+                    console.log('Refreshed acsess token');
                     return response.data.access_token; // Return the new access token
                 } else {
                     setIsAuthenticated(false);

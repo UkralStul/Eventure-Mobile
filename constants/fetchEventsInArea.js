@@ -18,7 +18,7 @@ const fetchEventsInArea = async (mapRef) => {
       };
 
       // Отправляем запрос на сервер
-      const response = await axios.post(`${apiUrl}/api/v1/events/events_in_area/`, requestData);
+      const response = await axios.post(`${apiUrl}/api/v1/events/in/area/`, requestData);
 
       return response.data; // Возвращаем список событий
     } catch (error) {

@@ -10,6 +10,23 @@ import EventCreationBottomSheetModal from "../../../components/EventCreationBott
 import BottomSheet, { BottomSheetModal } from "@gorhom/bottom-sheet";
 import fetchFriendsGeo from "@/constants/fetchFriendsGeo";
 import userLocation from "../../../hooks/userLocation";
+import EventDescriptionBottomSheet from "@/components/EventDescriptionBottomSheet";
+import fetchEventData from "@/constants/fetchEventData";
+
+
+interface Event {
+  id: number;
+  name: string;
+  description: string;
+  latitude: number;
+  longitude: number;
+  participants: Array<{
+    id: number;
+    email: string;
+    username: string;
+    profile_photo: string;
+  }>;
+}
 
 interface FriendGeo {
   user_id: string;
@@ -35,21 +52,24 @@ const MyMapComponent: React.FC = () => {
   const { user } = useContext(AuthContext);
   const { requestUserGeos, updateUserGeo, userGeos, friendsGeos, setFriendsGeos } = useGeoWebSocket();
   const eventCreationBottomSheetRef = useRef<BottomSheetModal>(null);
-  const [eventLocation, setEventLocation] = useState<{ lat: number; lon: number } | null>(null);
+  const eventDescriptionBottomSheetRef = useRef<BottomSheetModal>(null);
+  const [eventCreationLocation, setEventCreationLocation] = useState<{ lat: number; lon: number } | null>(null);
   const friendsMarkerRefs = useRef<{ [key: string]: any }>({});
+  const [eventDescription, setEventDescription] = useState<Event | string | null>(null)
+  const [loadingMarkerId, setLoadingMarkerId] = useState<string | null>(null);
+  // Запрос на обновление локации пользователя на сервере при изменении локации пользователя
   useEffect(() => {
     if (location) {
       updateUserGeo(user.id, { latitude: location.latitude, longitude: location.longitude });
     }
   }, [location]);
-
+  // Получение маркеров ивентов
   useEffect(() => {
     if (mapRef?.state.isReady) {
       handleRegionChangeComplete();
     }
-
   }, [mapRef]);
-
+  // Получение начальных координат
   useEffect(() => {
     if (initialLocation) {
       mapRef?.animateToRegion({
@@ -60,13 +80,13 @@ const MyMapComponent: React.FC = () => {
       });
     }
   }, [initialLocation]);
-
+  // Начало создания ивента
   useEffect(() => {
-    if (eventLocation) {
+    if (eventCreationLocation) {
       eventCreationBottomSheetRef.current?.present();
     }
-  }, [eventLocation]);
-
+  }, [eventCreationLocation]);
+  // Начальная локация друзей
   useEffect(() => {
     const fetchFriendsGeosData = async () => {
       const friendsGeos = await fetchFriendsGeo();
@@ -76,23 +96,35 @@ const MyMapComponent: React.FC = () => {
     fetchFriendsGeosData();
   }, []);
 
-
-  const handleRegionChangeComplete = async () => {
-  if (mapRef?.state.isReady) {
+  const handleEventMarkerPress = async (markerId: string) => {
+    setLoadingMarkerId(markerId); // Устанавливаем текущий маркер как "загружающийся"
     try {
-      const events = await fetchEventsInArea(mapRef);
-      setMarkers(events); // Обновляем маркеры на карте
+      const eventData = await fetchEventData(markerId); // Получение данных о событии
+      setEventDescription(eventData); // Передача данных в EventDescriptionBottomSheet
     } catch (error) {
-      console.error("Ошибка при обновлении маркеров:", error);
+      console.error("Ошибка при получении данных об ивенте:", error);
+    } finally {
+      setLoadingMarkerId(null); // Сбрасываем состояние загрузки
     }
-  }
-};
-
-  const createEvent = (lat: number, lon: number) => {
-    setEventLocation({ lat, lon });
+  };
+  // Рендер ивентов при перемещении карты
+  const handleRegionChangeComplete = async () => {
+    if (mapRef?.state.isReady) {
+      try {
+        const events = await fetchEventsInArea(mapRef);
+        setMarkers(events); // Обновляем маркеры на карте
+      } catch (error) {
+        console.error("Ошибка при обновлении маркеров:", error);
+      }
+    }
   };
 
-
+  // Отображение описания ивента
+  useEffect(() => {
+    if (eventDescription) {
+      eventDescriptionBottomSheetRef.current?.present();
+    }
+  }, [eventDescription]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -108,7 +140,7 @@ const MyMapComponent: React.FC = () => {
           onLongPress={(e) => {
             const lat = e.nativeEvent.coordinate.latitude;
             const lon = e.nativeEvent.coordinate.longitude;
-            createEvent(lat, lon);
+            setEventCreationLocation({ lat, lon });
           }}
           onRegionChangeComplete={handleRegionChangeComplete} // Обработчик завершения изменения региона
         >
@@ -124,15 +156,17 @@ const MyMapComponent: React.FC = () => {
           {markers && markers.map((marker) => (
             <Marker
               key={marker.id}
-              coordinate={{ latitude: marker.latitude, longitude: marker.longitude }} // Используем координаты из маркера
-              onPress={() => {
-                // Обработчик нажатия
-              }}
+              coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
+              onPress={() => handleEventMarkerPress(marker.id)}
             >
-                <Image
-                  source={require('../../../assets/images/map-point-icon.png')}
-                  style={{ width: 40, height: 40 }}
-                />
+                {loadingMarkerId === marker.id ? (
+                  <ActivityIndicator size="small" color="#0000ff" style={{ position: 'absolute', top: -20, left: -20, zIndex: 10 }}  />
+                ) : (
+                  <Image
+                    source={require('../../../assets/images/map-point-icon.png')}
+                    style={{ width: 40, height: 40 }}
+                  />
+                )}
             </Marker>
           ))}  
           {/* Friends Markers */}
@@ -147,28 +181,22 @@ const MyMapComponent: React.FC = () => {
             </Marker>
           ))}
         </MapView>
-      {eventLocation && (
+      {eventCreationLocation && (
         <EventCreationBottomSheetModal
           ref={eventCreationBottomSheetRef}
-          lat={eventLocation.lat}
-          lon={eventLocation.lon}
+          lat={eventCreationLocation.lat}
+          lon={eventCreationLocation.lon}
         />
+      )}
+      {eventDescription && (
+          <EventDescriptionBottomSheet
+            ref={eventDescriptionBottomSheetRef}
+            event={eventDescription as Event}
+            onClose={() => setEventDescription(null)}
+          />
       )}
     </View>
   );
 };
 
-
-const styles = StyleSheet.create({
-  avatarContainer: {
-    width: 50, // Размер круга
-    height: 50,
-    borderRadius: 25, // Половина ширины и высоты для получения круга
-    overflow: 'hidden', // Обрезаем изображение, чтобы оно не выходило за границы круга
-    borderWidth: 2,
-    borderColor: 'white', // Цвет границы
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
 export default MyMapComponent;
