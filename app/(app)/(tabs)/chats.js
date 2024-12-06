@@ -34,8 +34,6 @@ export default function Chats() {
   useEffect(() => {
     fetchChats();
   }, [wsMessages]);
-  console.log('Chats state:', chats);
-  console.log('Chats length > 0:', chats.length > 0);
   return (
     <View style={{flex: 1}}>
       {loading ? (

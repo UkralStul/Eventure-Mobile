@@ -42,6 +42,7 @@ const Chat = () => {
 
   useEffect(() => {
     fetchMessages(1);
+    console.log('item in chat: ', item)
   }, []);
 
   useEffect(() => {
@@ -70,7 +71,6 @@ const Chat = () => {
       ...item,
       isSender: user.id === item.sender_id,
     }
-    console.log(newItem);
     return <MessageItem content={newItem} />;
   };
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useContext, useRef } from 'react';
-import {View, ActivityIndicator, Image, GestureResponderEvent, Button, StyleSheet} from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps'; // Используем MapView из react-native-maps
+import {View, ActivityIndicator, Image, GestureResponderEvent, Button, StyleSheet, Platform} from 'react-native';
+import MapView, {AnimatedRegion, Marker, PROVIDER_GOOGLE} from 'react-native-maps'; // Используем MapView из react-native-maps
 import fetchEventsInArea from '../../../constants/fetchEventsInArea';
 import { AuthContext } from '../../../context/authContext';
 import { useGeoWebSocket } from '../../../context/geoWebSocketContext';
@@ -12,6 +12,9 @@ import fetchFriendsGeo from "@/constants/fetchFriendsGeo";
 import userLocation from "../../../hooks/userLocation";
 import EventDescriptionBottomSheet from "@/components/EventDescriptionBottomSheet";
 import fetchEventData from "@/constants/fetchEventData";
+import fetchUserData from "@/constants/fetchUserData";
+import UserProfileBottomSheetModal from "@/components/UserProfileBottomSheetModal";
+import {useNavigation} from "@react-navigation/native";
 
 
 interface Event {
@@ -29,9 +32,11 @@ interface Event {
 }
 
 interface FriendGeo {
-  user_id: string;
-  latitude: number;
-  longitude: number;
+  userId: string;
+  latitude: number
+  longitude: number
+  latitudeDelta: number
+  longitudeDelta: number
 }
 
 interface Coordinates {
@@ -45,21 +50,42 @@ interface EventMarker {
   longitude: number;
 }
 
+interface targetUser {
+  id: number
+  username: string
+  profile_photo: string
+  created_at: Date
+  birth_date: Date
+  about_me: string
+  last_seen: Date
+  is_friend: string
+  friend_request_sent_by: string
+}
+
 const MyMapComponent: React.FC = () => {
   const { location,initialLocation, errorMsg } = useLocation();
   const [mapRef, setMapRef] = useState<MapView | null>(null);
   const [markers, setMarkers] = useState<EventMarker[]>([]);
-  const { user } = useContext(AuthContext);
+  const { user, handleTokenRefresh } = useContext(AuthContext);
   const { requestUserGeos, updateUserGeo, userGeos, friendsGeos, setFriendsGeos } = useGeoWebSocket();
   const eventCreationBottomSheetRef = useRef<BottomSheetModal>(null);
   const eventDescriptionBottomSheetRef = useRef<BottomSheetModal>(null);
+  const userProfileBottomSheetRef = useRef<BottomSheetModal>(null);
   const [eventCreationLocation, setEventCreationLocation] = useState<{ lat: number; lon: number } | null>(null);
   const friendsMarkerRefs = useRef<{ [key: string]: any }>({});
   const [eventDescription, setEventDescription] = useState<Event | string | null>(null)
   const [loadingMarkerId, setLoadingMarkerId] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<targetUser | null>(null);
+  const navigation = useNavigation<any>();
+
+  // UserProfileOpen
+  useEffect(() => {
+    console.log('present')
+    userProfileBottomSheetRef.current?.present();
+  }, [userProfile]);
   // Запрос на обновление локации пользователя на сервере при изменении локации пользователя
   useEffect(() => {
-    if (location) {
+    if (location && user) {
       updateUserGeo(user.id, { latitude: location.latitude, longitude: location.longitude });
     }
   }, [location]);
@@ -89,13 +115,81 @@ const MyMapComponent: React.FC = () => {
   // Начальная локация друзей
   useEffect(() => {
     const fetchFriendsGeosData = async () => {
-      const friendsGeos = await fetchFriendsGeo();
-      console.log('initial friends geos: ', friendsGeos);
-      setFriendsGeos(friendsGeos);
-    };
-    fetchFriendsGeosData();
-  }, []);
+      const friendsGeosData = await fetchFriendsGeo();
+      const animatedFriendsGeos = friendsGeosData.map((friend: any) => ({
+        userId: friend.user_id,
+        latitude: friend.latitude,
+        longitude: friend.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      }));
+      setFriendsGeos(animatedFriendsGeos);
+      };
+      console.log('initial friendsGeos',friendsGeos)
+      fetchFriendsGeosData();
+    }, []);
+  // анимация маркеров когда приходит новая информация
+  useEffect(() => {
+    if (!friendsGeos || friendsGeos.length === 0) {
+      return;
+    }
+    console.log("Got new friendsGeos:", friendsGeos);
 
+    if (friendsMarkerRefs.current) {
+      friendsGeos.forEach((friendGeo: FriendGeo) => {
+        if (!friendGeo.userId) {
+          console.error("Invalid friendGeo object:", friendGeo);
+          return;
+        }
+
+        const markerRef = friendsMarkerRefs.current[friendGeo.userId];
+
+        if (markerRef) {
+          console.log(`Animating marker for userId: ${friendGeo.userId}`);
+
+          // Проверяем корректность координат перед анимацией
+          if (
+            typeof friendGeo.latitude === "number" &&
+            typeof friendGeo.longitude === "number"
+          ) {
+            if (Platform.OS === "android") {
+              markerRef.animateMarkerToCoordinate(
+                { latitude: friendGeo.latitude, longitude: friendGeo.longitude },
+                4000 // Duration in ms
+              );
+            } else {
+              markerRef.coordinate.timing({ latitude: friendGeo.latitude, longitude: friendGeo.longitude }).start()
+            }
+          } else {
+            console.error(
+              "Invalid coordinates:",
+              friendGeo.latitude,
+              friendGeo.longitude
+            );
+          }
+        } else {
+          console.error(`Marker ref not found or invalid for userId: ${friendGeo.userId}`);
+        }
+      });
+    }
+  }, [friendsGeos]);
+  const handleUserMarkerPress = async (userId: string) => {
+    if (userId == user.id){
+      navigation.navigate('profile');
+      eventDescriptionBottomSheetRef.current?.dismiss();
+    } else {
+      try{
+      const userData = await fetchUserData(userId);
+      if(userData.status == 401){
+        handleTokenRefresh();
+        const userData = await fetchUserData(userId);
+        console.log('user profile:', userProfile);
+      }
+      setUserProfile(userData.data);
+    } catch (error) {
+      console.error("Ошибка при получении данных об пользователе:", error);
+    }}
+  }
   const handleEventMarkerPress = async (markerId: string) => {
     setLoadingMarkerId(markerId); // Устанавливаем текущий маркер как "загружающийся"
     try {
@@ -145,7 +239,7 @@ const MyMapComponent: React.FC = () => {
           onRegionChangeComplete={handleRegionChangeComplete} // Обработчик завершения изменения региона
         >
           {/* User Marker */}
-          {location && (
+          {location && user && (
               <Marker
                   key={user.id}
                   coordinate={{latitude: location.latitude, longitude: location.longitude}}>
@@ -171,14 +265,17 @@ const MyMapComponent: React.FC = () => {
           ))}  
           {/* Friends Markers */}
           {friendsGeos && friendsGeos.map((friendGeo: FriendGeo) => (
-            <Marker
-              key={friendGeo.user_id}
-              coordinate={{ latitude: friendGeo.latitude, longitude: friendGeo.longitude }}
-              ref={(ref) => (friendsMarkerRefs.current[friendGeo.user_id] = ref)}
-              onPress={() => {console.log(friendsMarkerRefs)}}
+            <Marker.Animated
+              key={friendGeo.userId}
+              coordinate={{
+                latitude: friendGeo.latitude,
+                longitude: friendGeo.longitude,
+              }}
+              ref={(ref) => (friendsMarkerRefs.current[friendGeo.userId] = ref)}
+              onPress={() => handleUserMarkerPress(friendGeo.userId)}
             >
-                <FriendOnMap user_id={friendGeo.user_id} />
-            </Marker>
+              <FriendOnMap user_id={friendGeo.userId} />
+            </Marker.Animated>
           ))}
         </MapView>
       {eventCreationLocation && (
@@ -190,9 +287,18 @@ const MyMapComponent: React.FC = () => {
       )}
       {eventDescription && (
           <EventDescriptionBottomSheet
+            handleUserMarkerPress={handleUserMarkerPress}
+            userProfileBottomSheetRef={userProfileBottomSheetRef}
             ref={eventDescriptionBottomSheetRef}
             event={eventDescription as Event}
             onClose={() => setEventDescription(null)}
+          />
+      )}
+      {userProfile && (
+          <UserProfileBottomSheetModal
+            ref={userProfileBottomSheetRef}
+            targetUser={userProfile}
+            onClose={() => setUserProfile(null)}
           />
       )}
     </View>

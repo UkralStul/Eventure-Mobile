@@ -1,17 +1,20 @@
-import { View, StyleSheet, Image } from 'react-native';
-import React, {useEffect, useState} from 'react';
-
-import {ImageBackground} from "react-native";
+import React from 'react';
+import { View, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 
 export default function FriendOnMap({ user_id }) {
     const apiUrl = process.env.EXPO_PUBLIC_API_URL;
     // Формируем URI аватарки
     const avatarUri = `${apiUrl}/api/v1/images/avatar/${user_id}`;
+
     return (
         <View style={styles.avatarContainer}>
             <Image
-                source={{ uri: avatarUri }}
+                source={avatarUri}
                 style={styles.avatar}
+                contentFit="cover" // Устанавливаем как изображение будет обрезано
+                transition={1000} // Добавляем анимацию перехода при загрузке
+                cachePolicy={'none'}
             />
         </View>
     );

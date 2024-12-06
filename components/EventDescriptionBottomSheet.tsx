@@ -1,4 +1,4 @@
-import { View, StyleSheet, Text } from 'react-native';
+import {View, StyleSheet, Text, TouchableOpacity} from 'react-native';
 import { Image } from 'expo-image';
 import React, { forwardRef, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
@@ -30,17 +30,22 @@ interface Event {
 interface EventDescriptionBottomSheetModalProps {
   event: Event;
   onClose: () => void;
+  userProfileBottomSheetRef: React.RefObject<BottomSheetModal>
+  handleUserMarkerPress: (userId: string) => Promise<void>
 }
 
 
-const ParticipantsList = React.memo(({ participants }: { participants: Event['participants'] }) => {
+const ParticipantsList = React.memo(({ participants, handleUserMarkerPress }: {
+  participants: Event['participants'],
+  handleUserMarkerPress: (userId: string) => Promise<void>
+}) => {
   const apiUrlUsers = process.env.EXPO_PUBLIC_API_URL;
 
   const renderParticipant = ({ item }: { item: { username: string; profile_photo: string; id: number } }) => (
-    <View style={styles.participantContainer}>
-      <Image source={{ uri: `${apiUrlUsers}/api/v1/images/avatar/${item.id}` }} style={styles.participantImage} />
+    <TouchableOpacity onPress={() => handleUserMarkerPress(item.id.toString())} style={styles.participantContainer}>
+      <Image cachePolicy={'none'} source={{ uri: `${apiUrlUsers}/api/v1/images/avatar/${item.id}` }} style={styles.participantImage} />
       <Text style={styles.participantName}>{item.username}</Text>
-    </View>
+    </TouchableOpacity>
   );
 
   const renderSeparator = () => <View style={styles.separator} />;
@@ -61,7 +66,7 @@ const ParticipantsList = React.memo(({ participants }: { participants: Event['pa
 
 const EventDescriptionBottomSheetModal = React.memo(forwardRef<BottomSheetModal, EventDescriptionBottomSheetModalProps>((props, ref) => {
   const snapPoints = useMemo(() => ['90%'], []);
-  const { event, onClose } = props;
+  const { event, onClose, userProfileBottomSheetRef, handleUserMarkerPress  } = props;
   const animationConfigs = useBottomSheetSpringConfigs({
     damping: 80,
     overshootClamping: true,
@@ -97,11 +102,6 @@ const EventDescriptionBottomSheetModal = React.memo(forwardRef<BottomSheetModal,
     }
   }, [user]);
 
-  useEffect(() => {
-    console.log('Bottom sheet rendered');
-    console.log('with props: ', props);
-  }, []);
-
   const renderBackdrop = useCallback(
     (props: any) => <BottomSheetBackdrop appearsOnIndex={0} disappearsOnIndex={-1} {...props} />,
     []
@@ -131,6 +131,7 @@ const EventDescriptionBottomSheetModal = React.memo(forwardRef<BottomSheetModal,
       keyboardBehavior={'extend'}
       onDismiss={onClose}
       enableDynamicSizing={false}
+      enableHandlePanningGesture={false}
     >
       <BottomSheetView style={styles.contentContainer}>
         <Text style={styles.containerHeadline}>{props.event.name}</Text>
@@ -143,12 +144,9 @@ const EventDescriptionBottomSheetModal = React.memo(forwardRef<BottomSheetModal,
             <Text style={styles.noParticipantsText}>Нет участников</Text>
           ) : (
             <View style={styles.flatListContainer}>
-              <BottomSheetFlatList
-                data={participants}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={renderParticipant}
-                style={styles.flatlist}
-                ItemSeparatorComponent={renderSeparator}
+              <ParticipantsList
+                participants={participants}
+                handleUserMarkerPress={handleUserMarkerPress}
               />
             </View>
           )}

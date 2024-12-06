@@ -6,7 +6,7 @@ const GeoWebSocketContext = createContext();
 
 export const GeoWebSocketProvider = ({ children }) => {
     const [userGeos, setUserGeos] = useState([]);
-    const [friendsGeos, setFriendsGeos] = useState(undefined);
+    const [friendsGeos, setFriendsGeos] = useState();
     const { user, handleTokenRefresh } = useContext(AuthContext);
     // Создаем ref для WebSocket
     const geoSocketRef = useRef(null);
@@ -32,30 +32,42 @@ export const GeoWebSocketProvider = ({ children }) => {
                     } else {
                         console.log('message: ',message)
                         if (message.action === 'update_friend_geo') {
-                            // Обновляем friendsGeos с учетом новых данных
+                            if (!message.user_id) {
+                                console.error("User ID is missing in the message:", message);
+                            }
                             setFriendsGeos((prevFriendsGeos) => {
                                 if (!prevFriendsGeos) {
-                                    // Если friendsGeos еще не инициализирован, создаем новый массив
-                                    return [{ userId: message.user_id, geo: message.geo }];
+                                    return [{
+                                        userId: message.user_id,
+                                        latitude: message.geo.latitude,
+                                        longitude: message.geo.longitude,
+                                        latitudeDelta: 0.01,
+                                        longitudeDelta: 0.01,
+                                    }];
                                 }
 
-                                // Проверяем, есть ли пользователь с таким user_id
-                                const existingFriendIndex = prevFriendsGeos.findIndex(
-                                    (friend) => friend.userId === message.user_id
-                                );
+                                const userExists = prevFriendsGeos.some((friend) => friend.userId === message.user_id);
 
-                                if (existingFriendIndex !== -1) {
-                                    // Если пользователь найден, обновляем его данные
-                                    const updatedFriends = [...prevFriendsGeos];
-                                    updatedFriends[existingFriendIndex] = {
-                                        ...updatedFriends[existingFriendIndex],
-                                        geo: message.geo,
-                                    };
-                                    return updatedFriends;
+                                if (userExists) {
+                                    // Обновляем существующего друга
+                                    return prevFriendsGeos.map((friend) =>
+                                        friend.userId === message.user_id
+                                            ? { ...friend,
+                                                  latitude: message.geo.latitude,
+                                                  longitude: message.geo.longitude,
+                                               }
+                                            : friend
+                                    );
                                 }
 
-                                // Если пользователь не найден, добавляем нового
-                                return [...prevFriendsGeos, { user_id: message.user_id, latitude: message.geo.latitude, longitude: message.geo.longitude }];
+                                // Добавляем нового друга
+                                return [...prevFriendsGeos, {
+                                    userId: message.user_id,
+                                    latitude: message.geo.latitude,
+                                    longitude: message.geo.longitude,
+                                    latitudeDelta: 0.01,
+                                    longitudeDelta: 0.01,
+                                }];
                             });
                         }
                     }
