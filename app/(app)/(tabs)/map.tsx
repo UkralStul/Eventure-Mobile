@@ -173,6 +173,7 @@ const MyMapComponent: React.FC = () => {
       });
     }
   }, [friendsGeos]);*/
+
   const handleUserMarkerPress = async (userId: string) => {
     if (userId == user.id){
       navigation.navigate('profile');
@@ -190,6 +191,7 @@ const MyMapComponent: React.FC = () => {
       console.error("Ошибка при получении данных об пользователе:", error);
     }}
   }
+
   const handleEventMarkerPress = async (markerId: string) => {
     setLoadingMarkerId(markerId); // Устанавливаем текущий маркер как "загружающийся"
     try {

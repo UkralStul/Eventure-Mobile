@@ -2,7 +2,6 @@ import { View, Text, Image, StyleSheet } from 'react-native';
 import React from 'react';
 
 export default function MessageItem({ content }) {
-  console.log('content in message item ', content)
   const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 
   const avatarUri = `${apiUrl}/api/v1/images/avatar/${content.sender_id}`;

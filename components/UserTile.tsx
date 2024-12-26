@@ -14,6 +14,7 @@ interface UserData {
 interface UserTileProps {
     userId: string;
     distance: string;
+    onPress: () => void;
 }
 
 const UserTile = (props: UserTileProps) => {
@@ -54,7 +55,7 @@ const UserTile = (props: UserTileProps) => {
     const apiUrl = process.env.EXPO_PUBLIC_API_URL;
     const avatarUri = `${apiUrl}/api/v1/images/avatar/${props.userId}?t=${new Date().getTime()}`;
     return (
-        <TouchableOpacity style={styles.container}>
+        <TouchableOpacity style={styles.container} onPress={props.onPress}>
             <View style={styles.avatarContainer}>
                 <Image source={{ uri: avatarUri }} style={styles.avatar} />
             </View>
