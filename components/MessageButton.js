@@ -34,7 +34,10 @@ const MessageButton = ({ userId, bottomSheetRef  }) => {
         }
         const item = response.data
         navigation.navigate('chat', {item});
-        bottomSheetRef.current?.dismiss();
+        if(bottomSheetRef){
+            bottomSheetRef.current?.dismiss();
+        }
+
     }
 
 

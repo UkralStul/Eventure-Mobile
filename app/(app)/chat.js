@@ -1,4 +1,14 @@
-import { View, Text, FlatList, TextInput, Button, ActivityIndicator, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  TextInput,
+  Button,
+  ActivityIndicator,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform
+} from 'react-native';
 import React, { useEffect, useState, useContext, useRef } from 'react';
 import { useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -42,7 +52,7 @@ const Chat = () => {
 
   useEffect(() => {
     fetchMessages(1);
-    console.log('item in chat: ', item)
+    console.log('item in chat: ', item);
   }, []);
 
   useEffect(() => {
@@ -50,7 +60,7 @@ const Chat = () => {
       const messagesArray = Array.isArray(wsMessages) ? wsMessages : [wsMessages];
       if (messagesArray.length > 0) {
         const parsedMessages = messagesArray.map((msg) =>
-          typeof msg === 'string' ? JSON.parse(msg) : msg
+            typeof msg === 'string' ? JSON.parse(msg) : msg
         );
         setMessages((prevMessages) => [...prevMessages, ...parsedMessages]);
         scrollToBottom();
@@ -70,7 +80,7 @@ const Chat = () => {
     const newItem = {
       ...item,
       isSender: user.id === item.sender_id,
-    }
+    };
     return <MessageItem content={newItem} />;
   };
 
@@ -83,40 +93,42 @@ const Chat = () => {
   };
 
   return (
-    <View style={styles.container}>
-      {loading ? (
-        <View style={styles.activityIndicator}>
-          <ActivityIndicator size="large" color="gray" />
-        </View>
-      ) : (
-        <View style={styles.chatContainer}>
-          <Text style={styles.chatTitle}>{item.name}</Text>
+      <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0} // Настройте значение offset, если необходимо
+      >
+        {loading ? (
+            <View style={styles.activityIndicator}>
+              <ActivityIndicator size="large" color="gray" />
+            </View>
+        ) : (
+            <View style={styles.chatContainer}>
+              <Text style={styles.chatTitle}>{item.name}</Text>
 
-          {/* Проверяем, есть ли сообщения */}
-          {messages.length === 0 ? (
-            <Text style={styles.noMessagesText}>Сообщений нет</Text>
-          ) : (
-            <FlatList
-              ref={flatListRef}
-              data={messages}
-              renderItem={renderMessageItem}
-              keyExtractor={(item) => item.id.toString()}
-            />
-          )}
+              {messages.length === 0 ? (
+                  <Text style={styles.noMessagesText}>Сообщений нет</Text>
+              ) : (
+                  <FlatList
+                      ref={flatListRef}
+                      data={messages}
+                      renderItem={renderMessageItem}
+                      keyExtractor={(item) => item.id.toString()}
+                  />
+              )}
 
-          {/* Ввод нового сообщения */}
-          <View style={styles.inputContainer}>
-            <TextInput
-              value={messageInput}
-              onChangeText={setMessageInput}
-              placeholder="Введите сообщение"
-              style={styles.input}
-            />
-            <Button title="Отправить" onPress={handePress} />
-          </View>
-        </View>
-      )}
-    </View>
+              <View style={styles.inputContainer}>
+                <TextInput
+                    value={messageInput}
+                    onChangeText={setMessageInput}
+                    placeholder="Введите сообщение"
+                    style={styles.input}
+                />
+                <Button title="Отправить" onPress={handePress} />
+              </View>
+            </View>
+        )}
+      </KeyboardAvoidingView>
   );
 };
 

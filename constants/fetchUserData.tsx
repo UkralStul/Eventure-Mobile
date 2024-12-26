@@ -14,7 +14,7 @@ const fetchUserData = async (userId: string) => {
         });
         return response
     } catch (error) {
-        console.error('Error fetching friends geo:', error);
+        console.error('Error fetching user data:', error);
         throw error;
     }
 }

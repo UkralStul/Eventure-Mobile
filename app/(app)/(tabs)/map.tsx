@@ -129,7 +129,7 @@ const MyMapComponent: React.FC = () => {
       fetchFriendsGeosData();
     }, []);
   // анимация маркеров когда приходит новая информация
-  useEffect(() => {
+  /* useEffect(() => {
     if (!friendsGeos || friendsGeos.length === 0) {
       return;
     }
@@ -172,7 +172,7 @@ const MyMapComponent: React.FC = () => {
         }
       });
     }
-  }, [friendsGeos]);
+  }, [friendsGeos]);*/
   const handleUserMarkerPress = async (userId: string) => {
     if (userId == user.id){
       navigation.navigate('profile');
