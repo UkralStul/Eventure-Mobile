@@ -13,7 +13,7 @@ interface UserData {
 
 interface UserTileProps {
     userId: string;
-    distance: string;
+    distance?: string;
     onPress: () => void;
 }
 
@@ -72,10 +72,12 @@ const UserTile = (props: UserTileProps) => {
                         Пользователь не указал информации о себе
                     </Text>
                 )}
-                <View style={{ flex: 1, flexDirection: "row"}}>
-                    <Text style={styles.distanceText}>{props.distance}</Text>
-                    <Text style={styles.aboutMeText}>метров от вас</Text>
-                </View>
+                {props.distance && (  // отображаем информацию о дистанции только если props.distance существует
+                    <View style={{ flex: 1, flexDirection: "row"}}>
+                        <Text style={styles.distanceText}>{props.distance}</Text>
+                        <Text style={styles.aboutMeText}>метров от вас</Text>
+                    </View>
+                )}
             </View>
             <View style={styles.buttonContainer}>
                 <MessageButton userId={props.userId} bottomSheetRef={undefined} />

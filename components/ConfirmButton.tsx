@@ -4,11 +4,12 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 interface ConfirmButtonProps {
   onPress: () => void; // Функция, вызываемая при нажатии
   text: string; // Текст кнопки
+  disabled?: boolean;
 }
 
-const ConfirmButton: React.FC<ConfirmButtonProps> = ({ onPress, text }) => {
+const ConfirmButton: React.FC<ConfirmButtonProps> = ({ onPress, text, disabled  }) => {
   return (
-    <TouchableOpacity onPress={onPress}>
+    <TouchableOpacity disabled={disabled} onPress={onPress}>
       <View style={styles.button}>
         <Text style={styles.buttonText}>{text}</Text>
       </View>

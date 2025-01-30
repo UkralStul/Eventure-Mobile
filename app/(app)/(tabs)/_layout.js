@@ -9,9 +9,11 @@ import {BottomSheetModalProvider} from "@gorhom/bottom-sheet";
 export default function TabLayout() {
   return (
         <Tabs detachInactiveScreens={Platform.OS === "android" ? false : true} screenOptions={{ tabBarActiveTintColor: 'blue' }}>
-          <Tabs.Screen name="chats" />
-          <Tabs.Screen name="map" />
-          <Tabs.Screen name="profile" />
+            <Tabs.Screen name="events" />
+            <Tabs.Screen name="profile" />
+            <Tabs.Screen name="map" />
+            <Tabs.Screen name="chats" />
+            <Tabs.Screen name="peoples" />
         </Tabs>
   );
 }
