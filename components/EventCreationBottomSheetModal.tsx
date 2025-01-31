@@ -93,7 +93,7 @@ const EventCreationBottomSheetModal = React.memo(forwardRef<BottomSheetModal, Ev
   const handleImagePick = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'], // Исправлено на актуальный формат
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
