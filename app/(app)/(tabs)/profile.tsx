@@ -1,11 +1,19 @@
 import {Alert, ScrollView, StyleSheet, Text, View, FlatList, RefreshControl, TouchableOpacity} from 'react-native'
-import React, { useEffect, useState } from 'react'
+import React, {useEffect, useRef, useState} from 'react'
 import { useAuth } from "@/context/authContext";
 import { Image } from 'expo-image';
 import ChangeProfilePictureButton from "@/components/ChangeProfilePictureButton";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import EventUpdateBottomSheetModal from "@/components/EventUpdateBottomSheetModal";
+import {BottomSheetModal} from "@gorhom/bottom-sheet";
+
+interface UpdateEvent {
+    name: string
+    description: string
+    id: number;
+}
 
 const Profile = () => {
     const { logout, user } = useAuth();
@@ -15,6 +23,54 @@ const Profile = () => {
     const [refreshing, setRefreshing] = useState(false);
     const apiUrl = process.env.EXPO_PUBLIC_API_URL;
     const apiUrlGeo = process.env.EXPO_PUBLIC_API_URL_GEO;
+    const eventUpdateBottomSheetRef = useRef<BottomSheetModal>(null);
+    const [updateEvent, setUpdateEvent] = useState<UpdateEvent | null>(null);
+
+    const onUpdatePress = (name: string, description: string, id: number) => {
+        setUpdateEvent({name, description, id});
+        console.log('onUpdatePress', name, description);
+    }
+
+    useEffect(() => {
+        if (updateEvent) { // Проверяем, что updateEvent не null
+            eventUpdateBottomSheetRef.current?.present();
+        }
+    }, [updateEvent]);
+
+    const onDeletePress = async (eventId: number) => {
+        Alert.alert(
+            'Подтверждение удаления',
+            'Вы точно хотите удалить это событие? Это действие нельзя отменить.',
+            [
+                {
+                    text: 'Отмена',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Удалить',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            const token = await AsyncStorage.getItem('authToken');
+
+                            const response = await axios.delete(
+                                `${apiUrlGeo}/api/v1/events/${eventId}`,
+                                { params: { token } }
+                            );
+
+                            // Обновление состояния или навигация
+                            Alert.alert('Успех', 'Событие успешно удалено');
+                            loadUserEvents();
+                        } catch (error) {
+                            console.error('Ошибка удаления:', error);
+                            Alert.alert('Ошибка', 'Не удалось удалить событие');
+                        }
+                    },
+                },
+            ],
+            { cancelable: true }
+        );
+    };
 
     const loadUserEvents = async () => {
         try {
@@ -116,11 +172,26 @@ const Profile = () => {
     }, [selectedImage]);
 
     const renderEventItem = ({ item }: { item: any }) => (
-        <TouchableOpacity style={styles.eventCard}>
-            <Image source={{ uri: `${apiUrlGeo}/api/v1/events/preview/${item.id}` }} style={styles.eventImage} />
+        <View style={styles.eventCard}>
+            <Image
+                source={{ uri: `${apiUrlGeo}/api/v1/events/preview/${item.id}` }}
+                style={styles.eventImage}
+                cachePolicy={'none'}
+            />
             <Text style={styles.eventTitle}>{item.name}</Text>
             <Text style={styles.eventDescription}>{item.description}</Text>
-        </TouchableOpacity>
+            <View style={{flexDirection: 'row'}}>
+                <TouchableOpacity
+                    style={{ marginHorizontal: 15}}
+                    onPress={() => {onUpdatePress(item.name, item.description, item.id)}}
+                >
+                    <Text>Изменить</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => onDeletePress(item.id)}>
+                    <Text>Удалить</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
     );
 
     return (
@@ -158,7 +229,17 @@ const Profile = () => {
                     />
                 )}
             </View>
+            {updateEvent && (
+                <EventUpdateBottomSheetModal
+                    ref={eventUpdateBottomSheetRef}
+                    name={updateEvent?.name}
+                    description={updateEvent?.description}
+                    id={updateEvent.id}
+                    onClose={() => setUpdateEvent(null)}
+                />
+            )}
         </ScrollView>
+
     )
 }
 
@@ -168,6 +249,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 20,
     },
+
     eventImage: {
         width: '100%',
         height: 200,

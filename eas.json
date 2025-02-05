@@ -6,12 +6,28 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "buildType": "apk",
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://185.188.181.246:8000",
+        "EXPO_PUBLIC_API_URL_GEO": "http://185.188.181.246:8001"
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://185.188.181.246:8000",
+        "EXPO_PUBLIC_API_URL_GEO": "http://185.188.181.246:8001"
+      }
     },
     "production": {
+      "android": {
+        "buildType": "apk",
+        "env": {
+          "EXPO_PUBLIC_API_URL": "http://185.188.181.246:8000",
+          "EXPO_PUBLIC_API_URL_GEO": "http://185.188.181.246:8001"
+        }
+      },
       "autoIncrement": true
     }
   },
