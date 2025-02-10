@@ -86,6 +86,7 @@ const EventCreationBottomSheetModal = React.memo(forwardRef<BottomSheetModal, Ev
       }
     } finally {
       setIsSubmitting(false);
+      setSelectedImage(null);
     }
   };
 

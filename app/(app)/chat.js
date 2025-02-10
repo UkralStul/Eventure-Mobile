@@ -68,13 +68,18 @@ const Chat = () => {
     }
   }, [wsMessages]);
 
-  const handePress = () => {
-    if (messageInput.length !== 0) {
-      sendMessage(item.id, messageInput, item.users[0].id);
-      setMessageInput('');
-      scrollToBottom();
+  const handlePress = () => {
+  if (messageInput.length !== 0) {
+    const receiver = item.users.find(u => u.id !== user.id);
+    if (!receiver) {
+      console.error("Получатель не найден!");
+      return;
     }
-  };
+    sendMessage(item.id, messageInput, receiver.id);
+    setMessageInput('');
+    scrollToBottom();
+  }
+};
 
   const renderMessageItem = ({ item }) => {
     const newItem = {
@@ -124,7 +129,7 @@ const Chat = () => {
                     placeholder="Введите сообщение"
                     style={styles.input}
                 />
-                <Button title="Отправить" onPress={handePress} />
+                <Button title="Отправить" onPress={handlePress} />
               </View>
             </View>
         )}

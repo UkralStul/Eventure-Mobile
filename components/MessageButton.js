@@ -30,7 +30,7 @@ const MessageButton = ({ userId, bottomSheetRef  }) => {
         if(response.status === 401){
             const {  handleTokenRefresh } = useContext(AuthContext);
             handleTokenRefresh();
-            const response = startConversation()
+            const response = await startConversation()
         }
         const item = response.data
         navigation.navigate('chat', {item});
