@@ -1,9 +1,11 @@
-import {View, ScrollView, ActivityIndicator, StyleSheet, Text} from 'react-native';
+import {View, ScrollView, ActivityIndicator, StyleSheet, Text, SafeAreaView} from 'react-native';
 import React, { useEffect, useState } from 'react';
 import ChatList from '../../../components/ChatList';
 import axios from 'axios'; 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useWebSocket} from "@/context/webSocketContext";
+import {Header} from "react-native/Libraries/NewAppScreen";
+import {StatusBar} from "expo-status-bar";
 
 
 export default function Chats() {
@@ -35,7 +37,8 @@ export default function Chats() {
     fetchChats();
   }, [wsMessages]);
   return (
-    <View style={{flex: 1}}>
+      <>
+    <SafeAreaView style={{flex: 1}}>
       {loading ? (
         <View style={styles.activityIndicator}>
           <ActivityIndicator size="large" color="gray" />
@@ -49,7 +52,8 @@ export default function Chats() {
           <Text style={styles.noChatsText}>Нет чатов</Text>
         </View>
       )}
-    </View>
+    </SafeAreaView>
+      </>
   );
 }
 

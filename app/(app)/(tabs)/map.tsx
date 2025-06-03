@@ -1,6 +1,15 @@
 import React, { useEffect, useState, useContext, useRef } from 'react';
-import {View, ActivityIndicator, Image, GestureResponderEvent, Button, StyleSheet, Platform} from 'react-native';
-import MapView, {AnimatedRegion, Marker, PROVIDER_GOOGLE} from 'react-native-maps'; // Используем MapView из react-native-maps
+import {
+  View,
+  ActivityIndicator,
+  Image,
+  GestureResponderEvent,
+  Button,
+  StyleSheet,
+  Platform,
+  SafeAreaView, TouchableOpacity
+} from 'react-native';
+import MapView, {AnimatedRegion, Marker, PROVIDER_GOOGLE} from 'react-native-maps';
 import fetchEventsInArea from '../../../constants/fetchEventsInArea';
 import { AuthContext } from '../../../context/authContext';
 import { useGeoWebSocket } from '../../../context/geoWebSocketContext';
@@ -14,7 +23,9 @@ import EventDescriptionBottomSheet from "@/components/EventDescriptionBottomShee
 import fetchEventData from "@/constants/fetchEventData";
 import fetchUserData from "@/constants/fetchUserData";
 import UserProfileBottomSheetModal from "@/components/UserProfileBottomSheetModal";
-import {useNavigation} from "@react-navigation/native";
+import {useFocusEffect, useNavigation} from "@react-navigation/native";
+import {Ionicons} from "@expo/vector-icons";
+import {StatusBar} from "expo-status-bar";
 
 
 interface Event {
@@ -77,7 +88,16 @@ const MyMapComponent: React.FC = () => {
   const [loadingMarkerId, setLoadingMarkerId] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<targetUser | null>(null);
   const navigation = useNavigation<any>();
+  const [isFocused, setIsFocused] = useState(false);
 
+  useFocusEffect(
+      React.useCallback(() => {
+        setIsFocused(true); // Set focused state to true
+        return () => {
+          setIsFocused(false); // Set focused state to false when screen loses focus
+        };
+      }, [])
+  );
   // UserProfileOpen
   useEffect(() => {
     console.log('present')
@@ -128,51 +148,32 @@ const MyMapComponent: React.FC = () => {
       console.log('initial friendsGeos',friendsGeos)
       fetchFriendsGeosData();
     }, []);
-  // анимация маркеров когда приходит новая информация
-  /* useEffect(() => {
-    if (!friendsGeos || friendsGeos.length === 0) {
-      return;
+
+  const centerMapOnUser = () => {
+    if (mapRef && location) {
+      mapRef.animateToRegion(
+          {
+            latitude: location.latitude,
+            longitude: location.longitude,
+            latitudeDelta: 0.02,
+            longitudeDelta: 0.01,
+          },
+          1000 // Длительность анимации в мс
+      );
+    } else if (mapRef && initialLocation && !location) {
+      mapRef.animateToRegion(
+          {
+            latitude: initialLocation.latitude,
+            longitude: initialLocation.longitude,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421,
+          },
+          1000
+      );
+    } else {
+      console.log("Невозможно центрировать: нет ссылки на карту или данных о локации.");
     }
-    console.log("Got new friendsGeos:", friendsGeos);
-
-    if (friendsMarkerRefs.current) {
-      friendsGeos.forEach((friendGeo: FriendGeo) => {
-        if (!friendGeo.userId) {
-          console.error("Invalid friendGeo object:", friendGeo);
-          return;
-        }
-
-        const markerRef = friendsMarkerRefs.current[friendGeo.userId];
-
-        if (markerRef) {
-          console.log(`Animating marker for userId: ${friendGeo.userId}`);
-
-          // Проверяем корректность координат перед анимацией
-          if (
-            typeof friendGeo.latitude === "number" &&
-            typeof friendGeo.longitude === "number"
-          ) {
-            if (Platform.OS === "android") {
-              markerRef.animateMarkerToCoordinate(
-                { latitude: friendGeo.latitude, longitude: friendGeo.longitude },
-                4000 // Duration in ms
-              );
-            } else {
-              markerRef.coordinate.timing({ latitude: friendGeo.latitude, longitude: friendGeo.longitude }).start()
-            }
-          } else {
-            console.error(
-              "Invalid coordinates:",
-              friendGeo.latitude,
-              friendGeo.longitude
-            );
-          }
-        } else {
-          console.error(`Marker ref not found or invalid for userId: ${friendGeo.userId}`);
-        }
-      });
-    }
-  }, [friendsGeos]);*/
+  };
 
   const handleUserMarkerPress = async (userId: string) => {
     if (userId == user.id){
@@ -193,14 +194,14 @@ const MyMapComponent: React.FC = () => {
   }
 
   const handleEventMarkerPress = async (markerId: string) => {
-    setLoadingMarkerId(markerId); // Устанавливаем текущий маркер как "загружающийся"
+    setLoadingMarkerId(markerId);
     try {
       const eventData = await fetchEventData(markerId); // Получение данных о событии
-      setEventDescription(eventData); // Передача данных в EventDescriptionBottomSheet
+      setEventDescription(eventData);
     } catch (error) {
       console.error("Ошибка при получении данных об ивенте:", error);
     } finally {
-      setLoadingMarkerId(null); // Сбрасываем состояние загрузки
+      setLoadingMarkerId(null);
     }
   };
   // Рендер ивентов при перемещении карты
@@ -208,7 +209,7 @@ const MyMapComponent: React.FC = () => {
     if (mapRef?.state.isReady) {
       try {
         const events = await fetchEventsInArea(mapRef);
-        setMarkers(events); // Обновляем маркеры на карте
+        setMarkers(events);
       } catch (error) {
         console.error("Ошибка при обновлении маркеров:", error);
       }
@@ -223,88 +224,128 @@ const MyMapComponent: React.FC = () => {
   }, [eventDescription]);
 
   return (
-    <View style={{ flex: 1 }}>
-        <MapView
-          ref={(ref) => setMapRef(ref)}
-          style={{ width: '100%', height: '100%' }}
-          showsUserLocation={false} // Показываем текущую локацию пользователя
-          onPress={(e) => {
-            const centerLat = e.nativeEvent.coordinate.latitude;
-            const centerLon = e.nativeEvent.coordinate.longitude;
-            console.log('latitude: ', centerLat, 'longitude', centerLon);
-          }}
-          onLongPress={(e) => {
-            const lat = e.nativeEvent.coordinate.latitude;
-            const lon = e.nativeEvent.coordinate.longitude;
-            setEventCreationLocation({ lat, lon });
-          }}
-          onRegionChangeComplete={handleRegionChangeComplete} // Обработчик завершения изменения региона
-        >
-          {/* User Marker */}
-          {location && user && (
+    <>
+      {isFocused && <StatusBar style="dark" translucent={true} />}
+      <View style={{ flex: 1 }}>
+          <MapView
+            ref={(ref) => setMapRef(ref)}
+            style={{ width: '100%', height: '100%' }}
+            showsUserLocation={false} // Показываем текущую локацию пользователя
+            onPress={(e) => {
+              const centerLat = e.nativeEvent.coordinate.latitude;
+              const centerLon = e.nativeEvent.coordinate.longitude;
+              console.log('latitude: ', centerLat, 'longitude', centerLon);
+            }}
+            onLongPress={(e) => {
+              const lat = e.nativeEvent.coordinate.latitude;
+              const lon = e.nativeEvent.coordinate.longitude;
+              setEventCreationLocation({ lat, lon });
+            }}
+            onRegionChangeComplete={handleRegionChangeComplete} // Обработчик завершения изменения региона
+          >
+            {/* User Marker */}
+            {location && user && (
+                <Marker
+                    key={user.id}
+                    coordinate={{latitude: location.latitude, longitude: location.longitude}}>
+                  <FriendOnMap user_id={user.id} />
+                </Marker>
+            )}
+            {/* Event markers */}
+            {markers && markers.map((marker) => (
               <Marker
-                  key={user.id}
-                  coordinate={{latitude: location.latitude, longitude: location.longitude}}>
-                <FriendOnMap user_id={user.id} />
+                key={marker.id}
+                coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
+                onPress={() => handleEventMarkerPress(marker.id)}
+              >
+                  {loadingMarkerId === marker.id ? (
+                    <ActivityIndicator size="small" color="#0000ff" style={{ position: 'absolute', top: -20, left: -20, zIndex: 10 }}  />
+                  ) : (
+                    <Image
+                      source={require('../../../assets/images/map-point-icon.png')}
+                      style={{ width: 40, height: 40 }}
+                    />
+                  )}
               </Marker>
-          )}
-          {/* Event markers */}
-          {markers && markers.map((marker) => (
-            <Marker
-              key={marker.id}
-              coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
-              onPress={() => handleEventMarkerPress(marker.id)}
-            >
-                {loadingMarkerId === marker.id ? (
-                  <ActivityIndicator size="small" color="#0000ff" style={{ position: 'absolute', top: -20, left: -20, zIndex: 10 }}  />
-                ) : (
-                  <Image
-                    source={require('../../../assets/images/map-point-icon.png')}
-                    style={{ width: 40, height: 40 }}
-                  />
-                )}
-            </Marker>
-          ))}  
-          {/* Friends Markers */}
-          {friendsGeos && friendsGeos.map((friendGeo: FriendGeo) => (
-            <Marker.Animated
-              key={friendGeo.userId}
-              coordinate={{
-                latitude: friendGeo.latitude,
-                longitude: friendGeo.longitude,
-              }}
-              ref={(ref) => (friendsMarkerRefs.current[friendGeo.userId] = ref)}
-              onPress={() => handleUserMarkerPress(friendGeo.userId)}
-            >
-              <FriendOnMap user_id={friendGeo.userId} />
-            </Marker.Animated>
-          ))}
-        </MapView>
-      {eventCreationLocation && (
-        <EventCreationBottomSheetModal
-          ref={eventCreationBottomSheetRef}
-          lat={eventCreationLocation.lat}
-          lon={eventCreationLocation.lon}
-        />
-      )}
-      {eventDescription && (
-          <EventDescriptionBottomSheet
-            handleUserMarkerPress={handleUserMarkerPress}
-            userProfileBottomSheetRef={userProfileBottomSheetRef}
-            ref={eventDescriptionBottomSheetRef}
-            event={eventDescription as Event}
-            onClose={() => setEventDescription(null)}
+            ))}
+            {/* Friends Markers */}
+            {friendsGeos && friendsGeos.map((friendGeo: FriendGeo) => (
+              <Marker.Animated
+                key={friendGeo.userId}
+                coordinate={{
+                  latitude: friendGeo.latitude,
+                  longitude: friendGeo.longitude,
+                }}
+                ref={(ref) => (friendsMarkerRefs.current[friendGeo.userId] = ref)}
+                onPress={() => handleUserMarkerPress(friendGeo.userId)}
+              >
+                <FriendOnMap user_id={friendGeo.userId} />
+              </Marker.Animated>
+            ))}
+          </MapView>
+        <TouchableOpacity
+            style={styles.locationButton}
+            onPress={centerMapOnUser}
+        >
+          {/* Используем иконку из @expo/vector-icons */}
+          <Ionicons name="locate-outline" size={28} color="#007AFF" />
+          {/* Или ваша PNG иконка: */}
+          {/* <Image source={require('../../../assets/icons/my-location.png')} style={styles.locationButtonIcon} /> */}
+        </TouchableOpacity>
+        {eventCreationLocation && (
+          <EventCreationBottomSheetModal
+            ref={eventCreationBottomSheetRef}
+            lat={eventCreationLocation.lat}
+            lon={eventCreationLocation.lon}
           />
-      )}
-      {userProfile && (
-          <UserProfileBottomSheetModal
-            ref={userProfileBottomSheetRef}
-            targetUser={userProfile}
-            onClose={() => setUserProfile(null)}
-          />
-      )}
-    </View>
+        )}
+        {eventDescription && (
+            <EventDescriptionBottomSheet
+              handleUserMarkerPress={handleUserMarkerPress}
+              userProfileBottomSheetRef={userProfileBottomSheetRef}
+              ref={eventDescriptionBottomSheetRef}
+              event={eventDescription as Event}
+              onClose={() => setEventDescription(null)}
+            />
+        )}
+        {userProfile && (
+            <UserProfileBottomSheetModal
+              ref={userProfileBottomSheetRef}
+              targetUser={userProfile}
+              onClose={() => setUserProfile(null)}
+            />
+        )}
+      </View>
+    </>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    // backgroundColor: 'grey', // Фоновый цвет, пока карта грузится
+  },
+  locationButton: {
+    position: 'absolute', // Позиционируем поверх карты
+    bottom: 30,           // Отступ снизу
+    right: 20,            // Отступ справа
+    backgroundColor: 'white',
+    borderRadius: 30,     // Делаем круглой
+    padding: 10,
+    // Тени для iOS
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    // Тени для Android
+    elevation: 5,
+  },
+  // Если используете свою PNG иконку:
+  // locationButtonIcon: {
+  //   width: 28,
+  //   height: 28,
+  //   tintColor: '#007AFF' // Если иконка монохромная и хотите ее окрасить
+  // }
+});
 
 export default MyMapComponent;

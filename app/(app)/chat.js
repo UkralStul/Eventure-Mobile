@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
   StyleSheet,
   KeyboardAvoidingView,
-  Platform
+  Platform, SafeAreaView, Keyboard
 } from 'react-native';
 import React, { useEffect, useState, useContext, useRef } from 'react';
 import { useRoute } from '@react-navigation/native';
@@ -16,6 +16,7 @@ import axios from 'axios';
 import { useWebSocket } from '../../context/webSocketContext';
 import MessageItem from '../../components/MessageItem';
 import { AuthContext } from '../../context/authContext';
+import { useHeaderHeight } from '@react-navigation/elements';
 
 const Chat = () => {
   const { user } = useContext(AuthContext);
@@ -52,8 +53,22 @@ const Chat = () => {
 
   useEffect(() => {
     fetchMessages(1);
-    console.log('item in chat: ', item);
+    console.log('item in chat: ', item.users[0].username);
   }, []);
+
+  useEffect(() => {
+    // Подписываемся на события клавиатуры
+    const keyboardDidShowListener = Keyboard.addListener(
+        Platform.OS === 'android' ? 'keyboardDidShow' : 'keyboardWillShow', // На Android 'keyboardWillShow' может быть ненадежным
+        () => {
+          scrollToBottom();
+        }
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+    };
+  }, [scrollToBottom]);
 
   useEffect(() => {
     if (wsMessages) {
@@ -97,87 +112,97 @@ const Chat = () => {
     }, 100);
   };
 
+  const headerHeight = useHeaderHeight();
+
   return (
-      <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0} // Настройте значение offset, если необходимо
-      >
-        {loading ? (
-            <View style={styles.activityIndicator}>
-              <ActivityIndicator size="large" color="gray" />
-            </View>
-        ) : (
-            <View style={styles.chatContainer}>
-              <Text style={styles.chatTitle}>{item.name}</Text>
-
-              {messages.length === 0 ? (
-                  <Text style={styles.noMessagesText}>Сообщений нет</Text>
-              ) : (
-                  <FlatList
-                      ref={flatListRef}
-                      data={messages}
-                      renderItem={renderMessageItem}
-                      keyExtractor={(item) => item.id.toString()}
-                  />
-              )}
-
-              <View style={styles.inputContainer}>
-                <TextInput
-                    value={messageInput}
-                    onChangeText={setMessageInput}
-                    placeholder="Введите сообщение"
-                    style={styles.input}
-                />
-                <Button title="Отправить" onPress={handlePress} />
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.outerContainer}>
+          {loading ? (
+              <View style={styles.activityIndicator}>
+                <ActivityIndicator size="large" color="gray" />
               </View>
-            </View>
-        )}
-      </KeyboardAvoidingView>
+          ) : (
+              <>
+                {messages.length === 0 && !loading ? (
+                    <Text style={styles.noMessagesText}>Сообщений нет</Text>
+                ) : (
+                    <FlatList
+                        ref={flatListRef}
+                        data={messages}
+                        renderItem={renderMessageItem}
+                        keyExtractor={(item, index) => item.id?.toString() || `msg-${index}`}
+                        style={styles.flatList} // Важно, чтобы FlatList мог растягиваться
+                        contentContainerStyle={styles.flatListContent}
+
+                    />
+                )}
+
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                    keyboardVerticalOffset={headerHeight}
+                >
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                        value={messageInput}
+                        onChangeText={setMessageInput}
+                        placeholder="Введите сообщение"
+                        style={styles.input}
+                        multiline
+                    />
+                    <Button title="Отправить" onPress={handlePress} />
+                  </View>
+                </KeyboardAvoidingView>
+              </>
+          )}
+        </View>
+      </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  outerContainer: {
+    flex: 1,
+  },
   activityIndicator: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  container: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  chatContainer: {
-    flex: 1,
-  },
-  chatTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    padding: 16,
+  flatListContent: {
+    paddingHorizontal: 8,
+    paddingTop: 8,
+    paddingBottom: 8,
   },
   noMessagesText: {
+    flex: 1,
     textAlign: 'center',
-    marginTop: 20,
+    textAlignVertical: 'center',
     fontSize: 16,
     color: 'gray',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#D1D5DB',
+    backgroundColor: '#FFFFFF',
   },
   input: {
-    borderColor: '#ccc',
+    borderColor: '#D1D5DB',
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 8,
+    borderRadius: 20,
+    paddingVertical: Platform.OS === 'ios' ? 10 : 8,
+    paddingHorizontal: 12,
     flex: 1,
     marginRight: 8,
+    backgroundColor: 'white',
+    fontSize: 16,
   },
 });
 

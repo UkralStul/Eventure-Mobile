@@ -12,7 +12,26 @@ export default function TabLayout() {
       <GeoWebSocketProvider>
         <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="chat" options={{ presentation: 'modal' }} />
+            <Stack.Screen
+                name="chat"
+                options={({ route }) => {
+                    const params = route.params || {};
+                    let title = 'Чат';
+                    if (params.item.users[0].username) {
+                        title = params.item.users[0].username;
+                    }
+
+                    return {
+                        presentation: 'modal',
+                        // headerBackTitleVisible: false, // Если не нужна текстовая метка "Назад" на iOS
+                        title: title, // Устанавливаем заголовок
+                        // Вы можете добавить другие опции хедера здесь
+                        // headerStyle: { backgroundColor: '#f4511e' },
+                        // headerTintColor: '#fff',
+                        // headerTitleStyle: { fontWeight: 'bold' },
+                    };
+                }}
+            />
         </Stack>
       </GeoWebSocketProvider>
     </WebSocketProvider>
